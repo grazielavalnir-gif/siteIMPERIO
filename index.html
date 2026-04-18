@@ -219,16 +219,11 @@ async function fazerLogin() {
         document.getElementById('login-error').style.display = 'block';
         return;
     }
-    try {
-        dadosCache = await buscarDadosDiscord();
-        document.getElementById('login-screen').style.display = 'none';
-        document.getElementById('sidebar').style.display = 'flex';
-        document.getElementById('app').style.display = 'block';
-        carregarTudo();
-        setInterval(async () => { dadosCache = await buscarDadosDiscord(); carregarTudo(); }, 60000);
-    } catch {
-        document.getElementById('login-error').style.display = 'block';
-    }
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('sidebar').style.display = 'flex';
+    document.getElementById('app').style.display = 'block';
+    carregarTudo();
+    setInterval(async () => { dadosCache = await buscarDadosDiscord(); carregarTudo(); }, 60000);
 }
 document.addEventListener('keydown', e => { if (e.key==='Enter') fazerLogin(); });
 
