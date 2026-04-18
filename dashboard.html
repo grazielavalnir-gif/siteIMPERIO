@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Império Bot — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--gold:#F4A91B;--red:#FF4444;--green:#00CC66;--blue:#5865F2;--bg:#0a0a0c;--surface:#111115;--surface2:#18181f;--border:rgba(244,169,27,0.12);--text:#e8e8ef;--muted:#6b6b80;--font:'Syne',sans-serif;--mono:'JetBrains Mono',monospace;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;overflow-x:hidden;}
+
+/* LOGIN */
+#login-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:100;flex-direction:column;gap:24px;}
+.login-box{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:40px;width:340px;text-align:center;}
+.login-box h1{font-size:22px;font-weight:800;color:var(--gold);margin-bottom:6px;}
+.login-box p{font-size:13px;color:var(--muted);margin-bottom:24px;}
+.login-box input{width:100%;padding:12px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--mono);font-size:13px;outline:none;margin-bottom:12px;}
+.login-box input:focus{border-color:var(--gold);}
+.login-box input::placeholder{color:var(--muted);}
+.login-box button{width:100%;padding:12px;background:var(--gold);border:none;border-radius:10px;color:#000;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;transition:opacity .2s;}
+.login-box button:hover{opacity:.85;}
+.login-error{color:var(--red);font-size:12px;font-family:var(--mono);display:none;}
+
+/* SIDEBAR */
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:220px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:32px 0;z-index:10;}
+.logo{padding:0 24px 32px;border-bottom:1px solid var(--border);}
+.logo-icon{font-size:28px;display:block;margin-bottom:8px;}
+.logo-title{font-size:16px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--gold);}
+.logo-sub{font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px;}
+.nav{padding:24px 12px;flex:1;display:flex;flex-direction:column;gap:4px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);transition:all .2s;border:1px solid transparent;user-select:none;}
+.nav-item:hover{color:var(--text);background:var(--surface2);}
+.nav-item.active{color:var(--gold);background:rgba(244,169,27,.08);border-color:var(--border);}
+.nav-icon{font-size:16px;width:20px;text-align:center;}
+.sidebar-status{padding:16px 24px;border-top:1px solid var(--border);}
+.status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);margin-right:8px;animation:pulse 2s infinite;}
+.status-dot.offline{background:var(--red);box-shadow:0 0 8px var(--red);}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.status-text{font-size:12px;color:var(--muted);font-family:var(--mono);}
+
+/* MAIN */
+.main{margin-left:220px;padding:40px;position:relative;z-index:1;}
+.header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:40px;}
+.header-title{font-size:32px;font-weight:800;line-height:1.1;}
+.header-title span{color:var(--gold);}
+.header-sub{color:var(--muted);font-size:13px;margin-top:6px;font-family:var(--mono);}
+.header-right{display:flex;gap:10px;align-items:center;}
+.badge{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;font-family:var(--mono);border:1px solid var(--border);background:var(--surface);}
+.btn-refresh{padding:8px 16px;background:rgba(244,169,27,.1);border:1px solid var(--gold);border-radius:8px;color:var(--gold);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;}
+.btn-refresh:hover{background:rgba(244,169,27,.2);}
+.grid{display:grid;gap:20px;}
+.grid-4{grid-template-columns:repeat(4,1fr);}
+.grid-3{grid-template-columns:repeat(3,1fr);}
+.grid-2{grid-template-columns:repeat(2,1fr);}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;position:relative;overflow:hidden;transition:border-color .2s,transform .2s;}
+.card:hover{border-color:rgba(244,169,27,.25);transform:translateY(-2px);}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0;transition:opacity .3s;}
+.card:hover::before{opacity:.4;}
+.stat-icon{font-size:24px;margin-bottom:16px;display:block;}
+.stat-value{font-size:36px;font-weight:800;line-height:1;font-family:var(--mono);}
+.stat-label{font-size:12px;color:var(--muted);margin-top:6px;text-transform:uppercase;letter-spacing:.08em;font-weight:600;}
+.stat-change{margin-top:12px;font-size:12px;font-family:var(--mono);color:var(--green);}
+.stat-bar{margin-top:14px;height:3px;background:var(--surface2);border-radius:2px;overflow:hidden;}
+.stat-bar-fill{height:100%;border-radius:2px;transition:width 1s ease;}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+.card-title{font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;}
+.card-tag{font-size:11px;font-family:var(--mono);color:var(--muted);padding:3px 8px;background:var(--surface2);border-radius:4px;}
+.chart-wrap{position:relative;height:220px;}
+.chart-wrap-tall{position:relative;height:280px;}
+.feed{display:flex;flex-direction:column;gap:10px;}
+.feed-item{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--surface2);border-radius:10px;font-size:13px;border:1px solid transparent;transition:border-color .2s;animation:fadeIn .4s ease both;}
+.feed-item:hover{border-color:var(--border);}
+@keyframes fadeIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:none}}
+.feed-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.feed-dot.green{background:var(--green);box-shadow:0 0 6px var(--green);}
+.feed-dot.red{background:var(--red);box-shadow:0 0 6px var(--red);}
+.feed-dot.gold{background:var(--gold);box-shadow:0 0 6px var(--gold);}
+.feed-dot.blue{background:var(--blue);box-shadow:0 0 6px var(--blue);}
+.feed-dot.muted{background:var(--muted);}
+.feed-text{flex:1;color:var(--text);}
+.feed-text strong{color:var(--gold);}
+.feed-time{font-size:11px;color:var(--muted);font-family:var(--mono);white-space:nowrap;}
+.table{width:100%;border-collapse:collapse;}
+.table th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700;padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);}
+.table td{padding:12px;font-size:13px;border-bottom:1px solid rgba(255,255,255,.03);}
+.table tr:last-child td{border-bottom:none;}
+.table tr:hover td{background:rgba(244,169,27,.02);}
+.avatar{width:28px;height:28px;border-radius:50%;background:var(--surface2);display:inline-flex;align-items:center;justify-content:center;font-size:14px;margin-right:8px;vertical-align:middle;border:1px solid var(--border);}
+.pill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-family:var(--mono);font-weight:600;}
+.pill.green{background:rgba(0,204,102,.12);color:var(--green);}
+.pill.red{background:rgba(255,68,68,.12);color:var(--red);}
+.pill.gold{background:rgba(244,169,27,.12);color:var(--gold);}
+.pill.blue{background:rgba(88,101,242,.12);color:var(--blue);}
+.section-title{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;margin-bottom:16px;margin-top:8px;}
+.loading{display:flex;align-items:center;justify-content:center;height:80px;color:var(--muted);font-family:var(--mono);font-size:13px;}
+.empty{color:var(--muted);font-size:13px;text-align:center;padding:20px;font-family:var(--mono);}
+::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+@media(max-width:1200px){.grid-4{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:900px){.sidebar{display:none;}.main{margin-left:0;padding:20px;}.grid-3,.grid-2{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <span style="font-size:40px;display:block;margin-bottom:12px">🦅</span>
+    <h1>Império Dashboard</h1>
+    <p>Digite a senha para acessar o painel</p>
+    <input type="text" id="api-url" placeholder="URL da API (ex: http://localhost:3001)" value="http://localhost:3001">
+    <input type="password" id="api-secret" placeholder="Senha (DASHBOARD_SECRET)">
+    <button onclick="fazerLogin()">Entrar</button>
+    <div class="login-error" id="login-error">❌ Senha incorreta ou API offline</div>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar" style="display:none">
+  <div class="logo">
+    <span class="logo-icon">🦅</span>
+    <div class="logo-title">Império</div>
+    <div class="logo-sub">Bot Dashboard v3.0</div>
+  </div>
+  <nav class="nav">
+    <div class="nav-item active" onclick="setPage('dashboard',this)"><span class="nav-icon">📊</span> Dashboard</div>
+    <div class="nav-item" onclick="setPage('tickets',this)"><span class="nav-icon">🎫</span> Tickets</div>
+    <div class="nav-item" onclick="setPage('moderacao',this)"><span class="nav-icon">🛡️</span> Moderação</div>
+    <div class="nav-item" onclick="setPage('staff',this)"><span class="nav-icon">👥</span> Staff</div>
+    <div class="nav-item" onclick="setPage('logs',this)"><span class="nav-icon">📋</span> Logs</div>
+    <div class="nav-item" onclick="setPage('backups',this)"><span class="nav-icon">💾</span> Backups</div>
+  </nav>
+  <div class="sidebar-status">
+    <span class="status-dot" id="status-dot"></span>
+    <span class="status-text" id="status-text">Conectado</span>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main" id="app" style="display:none">
+
+  <!-- DASHBOARD -->
+  <div id="page-dashboard">
+    <div class="header">
+      <div><div class="header-title">Bem-vindo ao <span>Império</span></div><div class="header-sub" id="dash-update">Carregando...</div></div>
+      <div class="header-right"><button class="btn-refresh" onclick="carregarTudo()">↻ Atualizar</button></div>
+    </div>
+    <div class="section-title">Visão Geral</div>
+    <div class="grid grid-4" style="margin-bottom:20px" id="stats-cards"><div class="card"><div class="loading">Carregando...</div></div><div class="card"></div><div class="card"></div><div class="card"></div></div>
+    <div class="grid grid-2" style="margin-bottom:20px">
+      <div class="card"><div class="card-header"><div class="card-title">Tickets por Semana</div><div class="card-tag">últimos 7 dias</div></div><div class="chart-wrap"><canvas id="chartSemana"></canvas></div></div>
+      <div class="card"><div class="card-header"><div class="card-title">Motivos dos Tickets</div><div class="card-tag">distribuição</div></div><div class="chart-wrap"><canvas id="chartMotivos"></canvas></div></div>
+    </div>
+    <div class="grid grid-2">
+      <div class="card"><div class="card-header"><div class="card-title">Atividade Recente</div><div class="card-tag">logs ao vivo</div></div><div class="feed" id="dash-feed"><div class="loading">Carregando...</div></div></div>
+      <div class="card"><div class="card-header"><div class="card-title">Moderações por Tipo</div><div class="card-tag">total</div></div><div class="chart-wrap"><canvas id="chartModTipos"></canvas></div></div>
+    </div>
+  </div>
+
+  <!-- TICKETS -->
+  <div id="page-tickets" style="display:none">
+    <div class="header"><div><div class="header-title">Gestão de <span>Tickets</span></div><div class="header-sub">Histórico e métricas</div></div><div class="header-right"><button class="btn-refresh" onclick="carregarTickets()">↻ Atualizar</button></div></div>
+    <div class="grid grid-3" style="margin-bottom:20px" id="ticket-stats"></div>
+    <div class="card" style="margin-bottom:20px"><div class="card-header"><div class="card-title">Volume — 30 dias</div><div class="card-tag">diário</div></div><div class="chart-wrap-tall"><canvas id="chart30dias"></canvas></div></div>
+    <div class="grid grid-2" style="margin-bottom:20px">
+      <div class="card"><div class="card-header"><div class="card-title">Avaliações</div><div class="card-tag">por nota</div></div><div class="chart-wrap"><canvas id="chartAvaliacoes"></canvas></div></div>
+      <div class="card"><div class="card-header"><div class="card-title">Motivos</div><div class="card-tag">todos</div></div><div class="chart-wrap"><canvas id="chartMotivos2"></canvas></div></div>
+    </div>
+    <div class="card"><div class="card-header"><div class="card-title">Últimos Tickets</div><div class="card-tag">50 mais recentes</div></div><div id="ticket-table"><div class="loading">Carregando...</div></div></div>
+  </div>
+
+  <!-- MODERAÇÃO -->
+  <div id="page-moderacao" style="display:none">
+    <div class="header"><div><div class="header-title">Painel de <span>Moderação</span></div><div class="header-sub">Ações e histórico</div></div><div class="header-right"><button class="btn-refresh" onclick="carregarModeracao()">↻ Atualizar</button></div></div>
+    <div class="grid grid-4" style="margin-bottom:20px" id="mod-stats"></div>
+    <div class="grid grid-2">
+      <div class="card"><div class="card-header"><div class="card-title">Ações por Semana</div><div class="card-tag">últimos 7 dias</div></div><div class="chart-wrap-tall"><canvas id="chartModSemana"></canvas></div></div>
+      <div class="card"><div class="card-header"><div class="card-title">Tipos de Ação</div><div class="card-tag">distribuição</div></div><div class="chart-wrap-tall"><canvas id="chartModPolar"></canvas></div></div>
+    </div>
+  </div>
+
+  <!-- STAFF -->
+  <div id="page-staff" style="display:none">
+    <div class="header"><div><div class="header-title">Equipe <span>Staff</span></div><div class="header-sub">Ranking e desempenho</div></div><div class="header-right"><button class="btn-refresh" onclick="carregarStaff()">↻ Atualizar</button></div></div>
+    <div class="grid grid-2" style="margin-bottom:20px">
+      <div class="card"><div class="card-header"><div class="card-title">Tickets por Staff</div><div class="card-tag">ranking</div></div><div class="chart-wrap-tall"><canvas id="chartStaff"></canvas></div></div>
+      <div class="card"><div class="card-header"><div class="card-title">Tempo Médio (min)</div><div class="card-tag">por staff</div></div><div class="chart-wrap-tall"><canvas id="chartTempo"></canvas></div></div>
+    </div>
+    <div class="card"><div class="card-header"><div class="card-title">Tabela Completa</div></div><div id="staff-table"><div class="loading">Carregando...</div></div></div>
+  </div>
+
+  <!-- LOGS -->
+  <div id="page-logs" style="display:none">
+    <div class="header"><div><div class="header-title"><span>Logs</span> do Sistema</div><div class="header-sub">Últimas 100 ações</div></div><div class="header-right"><button class="btn-refresh" onclick="carregarLogs()">↻ Atualizar</button></div></div>
+    <div class="card"><div class="card-header"><div class="card-title">Feed de Eventos</div><div class="card-tag" id="logs-count">—</div></div><div class="feed" id="logs-feed" style="max-height:600px;overflow-y:auto"><div class="loading">Carregando...</div></div></div>
+  </div>
+
+  <!-- BACKUPS -->
+  <div id="page-backups" style="display:none">
+    <div class="header"><div><div class="header-title">Gestão de <span>Backups</span></div><div class="header-sub">Histórico de backups do servidor</div></div><div class="header-right"><button class="btn-refresh" onclick="carregarBackups()">↻ Atualizar</button></div></div>
+    <div class="card"><div class="card-header"><div class="card-title">Backups Salvos</div><div class="card-tag" id="backup-count">—</div></div><div id="backup-table"><div class="loading">Carregando...</div></div></div>
+  </div>
+
+</main>
+
+<script>
+let API_URL = '';
+let API_SECRET = '';
+const charts = {};
+
+// ── AUTH
+async function fazerLogin() {
+    API_URL    = document.getElementById('api-url').value.trim().replace(/\/$/,'');
+    API_SECRET = document.getElementById('api-secret').value.trim();
+    try {
+        const r = await fetch(`${API_URL}/stats`, { headers:{ 'x-secret': API_SECRET } });
+        if (!r.ok) throw new Error();
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('sidebar').style.display = 'flex';
+        document.getElementById('app').style.display = 'block';
+        carregarTudo();
+        setInterval(carregarTudo, 30000);
+    } catch {
+        document.getElementById('login-error').style.display = 'block';
+    }
+}
+document.addEventListener('keydown', e => { if (e.key==='Enter') fazerLogin(); });
+
+async function api(path) {
+    const r = await fetch(`${API_URL}${path}`, { headers:{ 'x-secret': API_SECRET } });
+    if (!r.ok) throw new Error(r.status);
+    return r.json();
+}
+
+// ── NAVIGATION
+function setPage(page, el) {
+    document.querySelectorAll('[id^=page-]').forEach(p => p.style.display='none');
+    document.getElementById('page-'+page).style.display = 'block';
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    if (el) el.classList.add('active');
+    const loaders = { tickets: carregarTickets, moderacao: carregarModeracao, staff: carregarStaff, logs: carregarLogs, backups: carregarBackups };
+    if (loaders[page]) loaders[page]();
+}
+
+// ── CHART HELPERS
+function gold(a=1){return`rgba(244,169,27,${a})`;}
+function red(a=1){return`rgba(255,68,68,${a})`;}
+function grn(a=1){return`rgba(0,204,102,${a})`;}
+function blu(a=1){return`rgba(88,101,242,${a})`;}
+
+const baseOpts = {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{ display:false } },
+    scales:{
+        x:{ grid:{color:'rgba(255,255,255,0.04)'}, ticks:{color:'#6b6b80',font:{family:'JetBrains Mono',size:10}} },
+        y:{ grid:{color:'rgba(255,255,255,0.04)'}, ticks:{color:'#6b6b80',font:{family:'JetBrains Mono',size:10}} }
+    }
+};
+
+function mkChart(id, type, data, opts={}) {
+    if (charts[id]) charts[id].destroy();
+    const ctx = document.getElementById(id);
+    if (!ctx) return;
+    charts[id] = new Chart(ctx, { type, data, options:{...baseOpts,...opts} });
+}
+
+// ── TEMPO RELATIVO
+function tempoAtras(iso) {
+    const diff = (Date.now() - new Date(iso)) / 1000;
+    if (diff < 60) return 'agora';
+    if (diff < 3600) return `${Math.floor(diff/60)}min atrás`;
+    if (diff < 86400) return `${Math.floor(diff/3600)}h atrás`;
+    return `${Math.floor(diff/86400)}d atrás`;
+}
+
+// ── TIPO LOG → COR + LABEL
+function tipoLog(tipo) {
+    const map = {
+        ticket_aberto:   ['gold','🎫 Ticket aberto'],
+        ticket_assumido: ['blue','✅ Ticket assumido'],
+        ticket_fechado:  ['muted','🔒 Ticket fechado'],
+        dm_enviada:      ['blue','📩 DM enviada'],
+        mod_ban:         ['red','🔨 Ban'],
+        mod_kick:        ['red','👢 Kick'],
+        mod_timeout:     ['gold','🔇 Timeout'],
+        mod_unban:       ['green','✋ Unban'],
+        mod_lockdown:    ['red','🔒 Lockdown ativado'],
+        mod_unlockdown:  ['green','🔓 Lockdown encerrado'],
+        mod_lockcanal:   ['red','🚫 Canal bloqueado'],
+        mod_unlockcanal: ['green','✅ Canal liberado'],
+        mod_purge:       ['muted','🧹 Purge'],
+        mod_bans:        ['muted','📋 Ver bans'],
+        backup_criado:   ['green','💾 Backup criado'],
+        backup_restaurado: ['gold','🔄 Backup restaurado'],
+        comando:         ['blue','⚙️ Comando'],
+    };
+    return map[tipo] || ['muted', tipo];
+}
+
+// ── DASHBOARD
+async function carregarTudo() {
+    document.getElementById('dash-update').textContent = 'Atualizando...';
+    try {
+        const [stats, semana, motivos, logs, modStats] = await Promise.all([
+            api('/stats'), api('/tickets/semana'), api('/tickets/motivos'), api('/logs'), api('/moderacao/stats')
+        ]);
+
+        // Status
+        document.getElementById('status-dot').className = 'status-dot';
+        document.getElementById('status-text').textContent = 'Conectado';
+        document.getElementById('dash-update').textContent = `Atualizado: ${new Date().toLocaleString('pt-BR')}`;
+
+        // Stats cards
+        document.getElementById('stats-cards').innerHTML = `
+            <div class="card"><span class="stat-icon">🎫</span><div class="stat-value" style="color:var(--gold)">${stats.total}</div><div class="stat-label">Tickets Totais</div><div class="stat-change">${stats.abertos} abertos agora</div><div class="stat-bar"><div class="stat-bar-fill" style="width:${Math.min((stats.total/200)*100,100)}%;background:var(--gold)"></div></div></div>
+            <div class="card"><span class="stat-icon">✅</span><div class="stat-value" style="color:var(--green)">${stats.abertos}</div><div class="stat-label">Em Aberto</div><div class="stat-change">${stats.fechados} fechados</div><div class="stat-bar"><div class="stat-bar-fill" style="width:${stats.total?Math.round((stats.abertos/stats.total)*100):0}%;background:var(--green)"></div></div></div>
+            <div class="card"><span class="stat-icon">⚠️</span><div class="stat-value" style="color:var(--red)">${stats.warns}</div><div class="stat-label">Warns Dados</div><div class="stat-change">${stats.bans} banimentos</div><div class="stat-bar"><div class="stat-bar-fill" style="width:${Math.min((stats.warns/100)*100,100)}%;background:var(--red)"></div></div></div>
+            <div class="card"><span class="stat-icon">⭐</span><div class="stat-value" style="color:var(--blue)">${stats.avgAval||'—'}</div><div class="stat-label">Avaliação Média</div><div class="stat-change">${stats.backups} backups salvos</div><div class="stat-bar"><div class="stat-bar-fill" style="width:${stats.avgAval?((stats.avgAval/5)*100):0}%;background:var(--blue)"></div></div></div>
+        `;
+
+        // Chart semana
+        const dias7 = getLast7Days();
+        const valsSemana = dias7.map(d => { const r = semana.find(s=>s.dia===d); return r?r.total:0; });
+        mkChart('chartSemana','bar',{
+            labels: dias7.map(d=>d.slice(5)),
+            datasets:[{ data:valsSemana, backgroundColor:valsSemana.map((v,i)=>i===valsSemana.length-1?gold(1):gold(.6)), borderRadius:6, borderSkipped:false }]
+        });
+
+        // Chart motivos
+        const cores = [red(.8),gold(.8),blu(.8),grn(.8),'rgba(156,100,255,.8)','rgba(255,165,0,.5)'];
+        mkChart('chartMotivos','doughnut',{
+            labels: motivos.map(m=>m.motivo),
+            datasets:[{ data:motivos.map(m=>m.total), backgroundColor:cores.slice(0,motivos.length), borderWidth:2, borderColor:'#111115' }]
+        }, { plugins:{ legend:{ display:true, position:'right', labels:{ color:'#6b6b80', font:{family:'JetBrains Mono',size:10}, boxWidth:10, padding:8 } } }, scales:{} });
+
+        // Chart mod tipos
+        const modLabels = modStats.map(m=>m.tipo.replace('mod_',''));
+        const modVals   = modStats.map(m=>m.total);
+        mkChart('chartModTipos','bar',{
+            labels: modLabels,
+            datasets:[{ data:modVals, backgroundColor:[red(.8),gold(.8),blu(.8),grn(.8),red(.6),gold(.5),'rgba(150,150,180,.6)'], borderRadius:6, borderSkipped:false }]
+        }, { indexAxis:'y' });
+
+        // Feed logs
+        renderFeed('dash-feed', logs.slice(0,8));
+
+    } catch(e) {
+        document.getElementById('status-dot').className = 'status-dot offline';
+        document.getElementById('status-text').textContent = 'Desconectado';
+        document.getElementById('dash-update').textContent = 'Erro ao conectar';
+    }
+}
+
+function getLast7Days() {
+    return Array.from({length:7},(_,i)=>{const d=new Date();d.setDate(d.getDate()-6+i);return d.toISOString().slice(0,10);});
+}
+
+function renderFeed(id, logs) {
+    const el = document.getElementById(id);
+    if (!logs.length) { el.innerHTML = '<div class="empty">Nenhum evento registrado.</div>'; return; }
+    el.innerHTML = logs.map((l,i) => {
+        const [cor, label] = tipoLog(l.tipo);
+        const desc = l.autor_tag ? `<strong>${l.autor_tag}</strong> — ${l.descricao}` : l.descricao;
+        return `<div class="feed-item" style="animation-delay:${i*0.04}s"><div class="feed-dot ${cor}"></div><div class="feed-text">${label}: ${desc}</div><div class="feed-time">${tempoAtras(l.criado_em)}</div></div>`;
+    }).join('');
+}
+
+// ── TICKETS
+let ticketChartsInit = false;
+async function carregarTickets() {
+    try {
+        const [stats, dias30, avaliacoes, motivos, lista] = await Promise.all([
+            api('/stats'), api('/tickets/30dias'), api('/tickets/avaliacoes'), api('/tickets/motivos'), api('/tickets/lista')
+        ]);
+
+        // Stats
+        const taxa = stats.total ? ((stats.fechados/stats.total)*100).toFixed(1) : 0;
+        document.getElementById('ticket-stats').innerHTML = `
+            <div class="card"><span class="stat-icon">📊</span><div class="stat-value" style="color:var(--gold)">${stats.total}</div><div class="stat-label">Total de Tickets</div></div>
+            <div class="card"><span class="stat-icon">✅</span><div class="stat-value" style="color:var(--green)">${stats.fechados}</div><div class="stat-label">Fechados</div><div class="stat-change">${taxa}% de resolução</div></div>
+            <div class="card"><span class="stat-icon">⭐</span><div class="stat-value" style="color:var(--blue)">${stats.avgAval||'—'}</div><div class="stat-label">Avaliação Média</div></div>
+        `;
+
+        // 30 dias
+        const allDays = Array.from({length:30},(_,i)=>{const d=new Date();d.setDate(d.getDate()-29+i);return d.toISOString().slice(0,10);});
+        const vals30  = allDays.map(d=>{const r=dias30.find(x=>x.dia===d);return r?r.total:0;});
+        mkChart('chart30dias','line',{
+            labels: allDays.map(d=>d.slice(5)),
+            datasets:[{ data:vals30, borderColor:gold(1), backgroundColor:gold(.08), borderWidth:2, fill:true, tension:.4, pointBackgroundColor:gold(1), pointRadius:3 }]
+        });
+
+        // Avaliações
+        const avalLabels = ['⭐','⭐⭐','⭐⭐⭐','⭐⭐⭐⭐','⭐⭐⭐⭐⭐'];
+        const avalVals   = [1,2,3,4,5].map(n=>{const r=avaliacoes.find(x=>x.avaliacao===n);return r?r.total:0;});
+        mkChart('chartAvaliacoes','bar',{
+            labels: avalLabels,
+            datasets:[{ data:avalVals, backgroundColor:[red(.7),red(.5),gold(.5),grn(.6),grn(.9)], borderRadius:8, borderSkipped:false }]
+        });
+
+        // Motivos
+        mkChart('chartMotivos2','pie',{
+            labels: motivos.map(m=>m.motivo),
+            datasets:[{ data:motivos.map(m=>m.total), backgroundColor:[red(.8),gold(.8),blu(.8),grn(.8),'rgba(156,100,255,.8)','rgba(255,165,0,.5)'], borderWidth:2, borderColor:'#111115' }]
+        },{plugins:{legend:{display:true,position:'right',labels:{color:'#6b6b80',font:{family:'JetBrains Mono',size:10},boxWidth:10,padding:8}}},scales:{}});
+
+        // Tabela
+        const statusPill = s => s==='aberto'?'<span class="pill gold">Aberto</span>':s==='em_atendimento'?'<span class="pill blue">Em Atendimento</span>':'<span class="pill green">Fechado</span>';
+        document.getElementById('ticket-table').innerHTML = `<table class="table">
+            <thead><tr><th>#</th><th>Usuário</th><th>Staff</th><th>Motivo</th><th>Status</th><th>Avaliação</th><th>Criado</th></tr></thead>
+            <tbody>${lista.map(t=>`<tr>
+                <td style="color:var(--muted);font-family:var(--mono)">${t.id}</td>
+                <td>${t.user_tag||t.user_id}</td>
+                <td>${t.staff_tag||'—'}</td>
+                <td>${t.motivo}</td>
+                <td>${statusPill(t.status)}</td>
+                <td>${t.avaliacao?'⭐'.repeat(t.avaliacao):'—'}</td>
+                <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${t.criado_em?.slice(0,16)||'—'}</td>
+            </tr>`).join('')}</tbody>
+        </table>`;
+    } catch(e){ console.error(e); }
+}
+
+// ── MODERAÇÃO
+async function carregarModeracao() {
+    try {
+        const [modStats, modSemana] = await Promise.all([api('/moderacao/stats'), api('/moderacao/semana')]);
+
+        const iconMap = {mod_ban:'🔨',mod_kick:'👢',mod_timeout:'🔇',mod_unban:'✋',mod_lockdown:'🔒',mod_unlockdown:'🔓',mod_lockcanal:'🚫',mod_unlockcanal:'✅',mod_purge:'🧹',mod_bans:'📋'};
+        const corMap  = {mod_ban:red(1),mod_kick:gold(1),mod_timeout:blu(1),mod_unban:grn(1),mod_lockdown:red(.8),mod_unlockdown:grn(.8),mod_lockcanal:red(.6),mod_unlockcanal:grn(.6),mod_purge:'rgba(150,150,180,.8)',mod_bans:'rgba(150,150,180,.6)'};
+
+        document.getElementById('mod-stats').innerHTML = modStats.slice(0,4).map(m=>`
+            <div class="card"><span class="stat-icon">${iconMap[m.tipo]||'⚙️'}</span>
+            <div class="stat-value" style="color:var(--gold)">${m.total}</div>
+            <div class="stat-label">${m.tipo.replace('mod_','')}</div></div>
+        `).join('') || '<div class="card"><div class="empty">Nenhuma ação registrada.</div></div>';
+
+        const dias7   = getLast7Days();
+        const valsSem = dias7.map(d=>{const r=modSemana.find(x=>x.dia===d);return r?r.total:0;});
+        mkChart('chartModSemana','bar',{
+            labels: dias7.map(d=>d.slice(5)),
+            datasets:[{ data:valsSem, backgroundColor:red(.7), borderRadius:6, borderSkipped:false }]
+        });
+
+        mkChart('chartModPolar','polarArea',{
+            labels: modStats.map(m=>m.tipo.replace('mod_','')),
+            datasets:[{ data:modStats.map(m=>m.total), backgroundColor:modStats.map(m=>corMap[m.tipo]||gold(.5)), borderWidth:0 }]
+        },{plugins:{legend:{display:true,position:'bottom',labels:{color:'#6b6b80',font:{family:'JetBrains Mono',size:10},boxWidth:10,padding:8}}},scales:{r:{grid:{color:'rgba(255,255,255,.04)'},ticks:{display:false}}}});
+
+    } catch(e){ console.error(e); }
+}
+
+// ── STAFF
+async function carregarStaff() {
+    try {
+        const ranking = await api('/staff/ranking');
+        if (!ranking.length) {
+            document.getElementById('staff-table').innerHTML = '<div class="empty">Nenhum dado de staff ainda.</div>';
+            return;
+        }
+
+        mkChart('chartStaff','bar',{
+            labels: ranking.map(s=>s.staff_tag?.split('#')[0]||'?'),
+            datasets:[{ data:ranking.map(s=>s.total), backgroundColor:ranking.map((_,i)=>gold(1-i*0.12)), borderRadius:8, borderSkipped:false }]
+        });
+
+        mkChart('chartTempo','bar',{
+            labels: ranking.map(s=>s.staff_tag?.split('#')[0]||'?'),
+            datasets:[{ data:ranking.map(s=>s.avg_minutos?+s.avg_minutos.toFixed(1):0), backgroundColor:ranking.map(s=>s.avg_minutos<5?grn(.8):s.avg_minutos<10?gold(.8):red(.7)), borderRadius:8, borderSkipped:false }]
+        },{scales:{...baseOpts.scales,y:{...baseOpts.scales.y,ticks:{...baseOpts.scales.y.ticks,callback:v=>v+'min'}}}});
+
+        document.getElementById('staff-table').innerHTML = `<table class="table">
+            <thead><tr><th>#</th><th>Staff</th><th>Tickets</th><th>Tempo Médio</th><th>Avaliação</th></tr></thead>
+            <tbody>${ranking.map((s,i)=>`<tr>
+                <td style="color:${i===0?'var(--gold)':'var(--muted)'}">${String(i+1).padStart(2,'0')}</td>
+                <td><span class="avatar">🛡️</span>${s.staff_tag||s.staff_id}</td>
+                <td><strong>${s.total}</strong></td>
+                <td style="font-family:var(--mono)">${s.avg_minutos?s.avg_minutos.toFixed(1)+'min':'—'}</td>
+                <td>${s.avg_aval?'⭐ '+s.avg_aval.toFixed(1):'—'}</td>
+            </tr>`).join('')}</tbody>
+        </table>`;
+    } catch(e){ console.error(e); }
+}
+
+// ── LOGS
+async function carregarLogs() {
+    try {
+        const logs = await api('/logs');
+        document.getElementById('logs-count').textContent = `${logs.length} eventos`;
+        renderFeed('logs-feed', logs);
+    } catch(e){ document.getElementById('logs-feed').innerHTML = '<div class="empty">Erro ao carregar logs.</div>'; }
+}
+
+// ── BACKUPS
+async function carregarBackups() {
+    try {
+        const backups = await api('/backups');
+        document.getElementById('backup-count').textContent = `${backups.length} backups`;
+        if (!backups.length) {
+            document.getElementById('backup-table').innerHTML = '<div class="empty">Nenhum backup encontrado. Use /beckup no Discord.</div>';
+            return;
+        }
+        document.getElementById('backup-table').innerHTML = `<table class="table">
+            <thead><tr><th>#</th><th>Servidor</th><th>ID do Servidor</th><th>Data</th><th>Status</th></tr></thead>
+            <tbody>${backups.map((b,i)=>`<tr>
+                <td style="color:var(--muted);font-family:var(--mono)">${b.id}</td>
+                <td><strong>${b.guild_name}</strong></td>
+                <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${b.guild_id}</td>
+                <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${new Date(b.criado_em).toLocaleString('pt-BR')}</td>
+                <td>${i===0?'<span class="pill green">Mais Recente</span>':'<span class="pill muted" style="background:rgba(107,107,128,.12);color:var(--muted)">Antigo</span>'}</td>
+            </tr>`).join('')}</tbody>
+        </table>`;
+    } catch(e){ document.getElementById('backup-table').innerHTML = '<div class="empty">Erro ao carregar backups.</div>'; }
+}
+</script>
+</body>
+</html>
