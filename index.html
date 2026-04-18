@@ -109,8 +109,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
     <span style="font-size:40px;display:block;margin-bottom:12px">🦅</span>
     <h1>Império Dashboard</h1>
     <p>Digite a senha para acessar o painel</p>
-    <input type="text" id="api-url" placeholder="URL da API (ex: http://localhost:3001)" value="http://localhost:3001">
-    <input type="password" id="api-secret" placeholder="Senha (DASHBOARD_SECRET)">
+    <input type="password" id="api-secret" placeholder="by lucas">
     <button onclick="fazerLogin()">Entrar</button>
     <div class="login-error" id="login-error">❌ Senha incorreta ou API offline</div>
   </div>
@@ -205,32 +204,64 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 </main>
 
 <script>
-let API_URL = '';
-let API_SECRET = '';
+// ── CONFIGURAÇÕES DA DASHBOARD
+const DISCORD_TOKEN    = 'MTQ5MzQxNTExOTQ1Mzk1MDEwMg.Gw71Mm.-JySAYyPpiEtgDFyYH7onuGTBwnxt3v5OY9KRE';
+const STATS_CHANNEL_ID = '1494885743540310087';
+const SENHA_CORRETA    = 'Lucasdev';
+
+let dadosCache = null;
 const charts = {};
 
 // ── AUTH
 async function fazerLogin() {
-    API_URL    = document.getElementById('api-url').value.trim().replace(/\/$/,'');
-    API_SECRET = document.getElementById('api-secret').value.trim();
+    const senha = document.getElementById('api-secret').value.trim();
+    if (senha !== SENHA_CORRETA) {
+        document.getElementById('login-error').style.display = 'block';
+        return;
+    }
     try {
-        const r = await fetch(`${API_URL}/stats`, { headers:{ 'x-secret': API_SECRET } });
-        if (!r.ok) throw new Error();
+        dadosCache = await buscarDadosDiscord();
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('sidebar').style.display = 'flex';
         document.getElementById('app').style.display = 'block';
         carregarTudo();
-        setInterval(carregarTudo, 30000);
+        setInterval(async () => { dadosCache = await buscarDadosDiscord(); carregarTudo(); }, 60000);
     } catch {
         document.getElementById('login-error').style.display = 'block';
     }
 }
 document.addEventListener('keydown', e => { if (e.key==='Enter') fazerLogin(); });
 
+async function buscarDadosDiscord() {
+    const r = await fetch('https://discord.com/api/v10/channels/' + STATS_CHANNEL_ID + '/messages?limit=10', {
+        headers: { 'Authorization': 'Bot ' + DISCORD_TOKEN }
+    });
+    if (!r.ok) throw new Error('Erro ao buscar canal');
+    const msgs = await r.json();
+    const botMsg = msgs.find(m => m.content && m.content.includes('IMPERIO_STATS:'));
+    if (!botMsg) throw new Error('Nenhum dado encontrado');
+    const json = botMsg.content.replace('IMPERIO_STATS:', '').trim();
+    return JSON.parse(json);
+}
+
 async function api(path) {
-    const r = await fetch(`${API_URL}${path}`, { headers:{ 'x-secret': API_SECRET } });
-    if (!r.ok) throw new Error(r.status);
-    return r.json();
+    if (!dadosCache) dadosCache = await buscarDadosDiscord();
+    const mapa = {
+        '/stats':              dadosCache.stats,
+        '/tickets/semana':     dadosCache.semana,
+        '/tickets/motivos':    dadosCache.motivos,
+        '/tickets/30dias':     dadosCache.dias30,
+        '/tickets/avaliacoes': dadosCache.avaliacoes,
+        '/tickets/lista':      dadosCache.lista,
+        '/staff/ranking':      dadosCache.staffRanking,
+        '/moderacao/stats':    dadosCache.modStats,
+        '/moderacao/semana':   dadosCache.modSemana,
+        '/logs':               dadosCache.logs,
+        '/warns':              dadosCache.warnsLista,
+        '/backups':            dadosCache.backupsLista,
+    };
+    if (!(path in mapa)) throw new Error('Rota não encontrada');
+    return mapa[path];
 }
 
 // ── NAVIGATION
